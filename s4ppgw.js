@@ -71,6 +71,7 @@ function s4pp_auth(sock, line)
 
 function s4pp_seq(sock, line)
 {
+  sock.hmac.update(sock.token);
   sock.runhash = true;
   if (sock.expect.indexOf('seq') < 0)
   {
