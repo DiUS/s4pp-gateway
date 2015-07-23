@@ -2,8 +2,24 @@ net = require('net');
 crypto = require('crypto');
 users = require('./users.js');
 db = require('./db.js');
+fs = require('fs');
 
 var valid_algos = ['MD5', 'SHA1', 'SHA256', 'SHA384', 'SHA512'];
+
+function maybe_tap_data (samples)
+{
+  if (process.argv.length > 2)
+  {
+    var lines = "";
+    for (var i = 0; i < samples.length; ++i)
+    {
+      var line = samples[i].time + ',' + samples[i].value + ',' + samples[i].name + '\n';
+      lines += line;
+    }
+    var fname = process.argv[2];
+    fs.appendFileSync(fname, lines);
+  }
+}
 
 function s4pp_updatehash(sock, line)
 {
@@ -149,6 +165,7 @@ function s4pp_sig(sock, line)
 
   var commit_seq = sock.this_seq; // may change before callback
   var commit_cache = sock.cache;
+  maybe_tap_data (commit_cache);
   sock.cache = {};
   db.commit (sock.user, commit_cache, function(err) {
     if (err)
