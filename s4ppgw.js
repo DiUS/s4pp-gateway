@@ -168,13 +168,19 @@ function s4pp_sig(sock, line)
   maybe_tap_data (commit_cache);
   sock.cache = {};
   db.commit (sock.user, commit_cache, function(err) {
-    if (err)
-    {
-      sock.write('NOK:' + commit_seq + "\n");
-      console.warn('DB: failed to commit:', err);
+    try {
+      if (err)
+      {
+        console.warn('DB: failed to commit:', err);
+        sock.write('NOK:' + commit_seq + "\n");
+      }
+      else
+        sock.write('OK:' + commit_seq + "\n");
     }
-    else
-      sock.write('OK:' + commit_seq + "\n");
+    catch(e)
+    {
+      console.warn('unexpected client disconnect');
+    }
   });
 
   sock.expect = ['seq'];
@@ -266,6 +272,7 @@ function s4pp_run(sock, data)
 }
 
 net.createServer(function (sock) {
+  sock.on('error',function(exc) { console.warn('socket exception: ' + e); });
   sock.on('data',function(data) { s4pp_run(sock, data); });
   s4pp_begin(sock);
 }).listen (22226);
