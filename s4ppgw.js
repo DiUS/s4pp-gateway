@@ -5,8 +5,25 @@ db = require('./db.js');
 fs = require('fs');
 
 var valid_algos = ['MD5', 'SHA1', 'SHA256', 'SHA384', 'SHA512'];
+var idle_timeout_sec = 10;
 
-function maybe_tap_data (samples)
+function disable_idle_timeout(sock)
+{
+  if (sock.timer)
+    clearTimeout (sock.timer);
+}
+
+function refresh_idle_timeout(sock)
+{
+  disable_idle_timeout(sock);
+  sock.timer = setTimeout(function () {
+    console.info('connection timeout');
+    sock.end('REJ:timeout\n');
+    sock.destroy();
+    }, idle_timeout_sec * 1000);
+}
+
+function maybe_tap_data(samples)
 {
   if (process.argv.length > 2)
   {
@@ -29,8 +46,8 @@ function s4pp_updatehash(sock, line)
 
 function s4pp_fail(sock, msg)
 {
-  try { sock.end('REJ:'+msg+'\n'); }
-  catch (e) { console.info('ignored error during close:', e); }
+  sock.end('REJ:'+msg+'\n');
+  disable_idle_timeout(sock);
   sock.destroy();
 }
 
@@ -168,19 +185,13 @@ function s4pp_sig(sock, line)
   maybe_tap_data (commit_cache);
   sock.cache = {};
   db.commit (sock.user, commit_cache, function(err) {
-    try {
-      if (err)
-      {
-        console.warn('DB: failed to commit:', err);
-        sock.write('NOK:' + commit_seq + "\n");
-      }
-      else
-        sock.write('OK:' + commit_seq + "\n");
-    }
-    catch(e)
+    if (err)
     {
-      console.warn('unexpected client disconnect');
+      console.warn('DB: failed to commit:', err);
+      sock.write('NOK:' + commit_seq + "\n");
     }
+    else
+      sock.write('OK:' + commit_seq + "\n");
   });
 
   sock.expect = ['seq'];
@@ -235,8 +246,9 @@ var commands =
 
 function s4pp_begin(sock)
 {
-  //sock.token = crypto.pseudoRandomBytes(32).toString('hex');
-  sock.token = '879cb65c9f9c5ecb19d2d88ad7ce81ca6f61394078b4477d9232ee70b2c8bd5d';
+  refresh_idle_timeout(sock);
+  sock.token = crypto.pseudoRandomBytes(32).toString('hex');
+  //sock.token = '879cb65c9f9c5ecb19d2d88ad7ce81ca6f61394078b4477d9232ee70b2c8bd5d';
   sock.max_cache_size = 2000;
   sock.write('S4PP/0.9 '+valid_algos.join(',')+' '+sock.max_cache_size+'\nTOK:'+sock.token+'\n');
   sock.data = '';
@@ -249,6 +261,7 @@ function s4pp_begin(sock)
 
 function s4pp_run(sock, data)
 {
+  refresh_idle_timeout(sock);
   sock.data += data
   while ((i = sock.data.indexOf('\n')) != -1)
   {
@@ -272,8 +285,9 @@ function s4pp_run(sock, data)
 }
 
 net.createServer(function (sock) {
-  sock.on('error',function(exc) { console.warn('socket exception: ' + e); });
+  sock.on('error',function(exc) { console.warn('socket exception: ' + exc); });
   sock.on('data',function(data) { s4pp_run(sock, data); });
+  sock.on('close',function() { disable_idle_timeout(sock); });
   s4pp_begin(sock);
 }).listen (22226);
 console.log('S4PP on port 22226\n');
