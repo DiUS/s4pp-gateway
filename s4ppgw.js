@@ -17,7 +17,7 @@ function refresh_idle_timeout(sock)
 {
   disable_idle_timeout(sock);
   sock.timer = setTimeout(function () {
-    console.info('connection timeout');
+    console.info('SOCK: connection timeout');
     sock.end('REJ:timeout\n');
     sock.destroy();
     }, idle_timeout_sec * 1000);
@@ -185,13 +185,20 @@ function s4pp_sig(sock, line)
   maybe_tap_data (commit_cache);
   sock.cache = {};
   db.commit (sock.user, commit_cache, function(err) {
-    if (err)
-    {
-      console.warn('DB: failed to commit:', err);
-      sock.write('NOK:' + commit_seq + "\n");
+    try {
+      if (err)
+      {
+        console.warn('DB: failed to commit:', err);
+        sock.write('NOK:' + commit_seq + "\n");
+      }
+      else
+        sock.write('OK:' + commit_seq + "\n");
     }
-    else
-      sock.write('OK:' + commit_seq + "\n");
+    catch (e)
+    {
+      console.log("SOCK: " + e);
+      sock.destroy();
+    }
   });
 
   sock.expect = ['seq'];
@@ -285,7 +292,7 @@ function s4pp_run(sock, data)
 }
 
 net.createServer(function (sock) {
-  sock.on('error',function(exc) { console.warn('socket exception: ' + exc); });
+  sock.on('error',function(exc) { console.warn('SOCK: error: ' + exc); });
   sock.on('data',function(data) { s4pp_run(sock, data); });
   sock.on('close',function() { disable_idle_timeout(sock); });
   s4pp_begin(sock);
