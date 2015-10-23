@@ -125,7 +125,7 @@ function s4pp_seq(sock, line)
     return;
   }
   sock.this_seq = seq;
-  sock.next_seq += seq + 1;
+  sock.next_seq = seq + 1;
   sock.lasttime = Number(arr[1]);
   sock.timediv = Number(arr[2]);
   sock.dataformat = Number(arr[3]);
@@ -183,7 +183,7 @@ function s4pp_sig(sock, line)
   var commit_seq = sock.this_seq; // may change before callback
   var commit_cache = sock.cache;
   maybe_tap_data (commit_cache);
-  sock.cache = {};
+  sock.cache = [];
   db.commit (sock.user, commit_cache, function(err) {
     try {
       if (err)
