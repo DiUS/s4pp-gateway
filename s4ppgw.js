@@ -1,7 +1,9 @@
+#!/usr/bin/env node
+
 net = require('net');
 crypto = require('crypto');
-users = require('./users.js');
-db = require('./db.js');
+users = require('./ili_users.js');
+db = require('./ili_db.js');
 fs = require('fs');
 
 var valid_algos = ['MD5', 'SHA1', 'SHA256', 'SHA384', 'SHA512'];
@@ -77,29 +79,32 @@ function s4pp_auth(sock, line)
   sock.algo = algo;
   var user = arr[1];
   var sig = arr[2];
-  sock.key = users.keyFor(user);
+  users.keyFor(user).then(function(iliUser) {
+    if (!iliUser)
+    {
+      s4pp_fail(sock, "bad auth");
+      console.info('AUTH: no key for user:', user);
+      return;
+    }
+    sock.key= iliUser.secret_key;
 
-  if (!sock.key)
-  {
-    s4pp_fail(sock, "bad auth");
-    console.info('AUTH: no key for user:', user);
-    return;
-  }
+    var hmac = crypto.createHmac(sock.algo, sock.key);
+    hmac.update(user);
+    hmac.update(sock.token);
+    var auth = hmac.digest('hex');
+    if (auth != sig)
+    {
+      s4pp_fail(sock, "bad auth");
+      console.info('AUTH: failed for user:', user, 'expected', auth, 'got', sig);
+      return;
+    }
 
-  var hmac = crypto.createHmac(sock.algo, sock.key);
-  hmac.update(user);
-  hmac.update(sock.token);
-  var auth = hmac.digest('hex');
-  if (auth != sig)
-  {
-    s4pp_fail(sock, "bad auth");
-    console.info('AUTH: failed for user:', user, 'expected', auth, 'got', sig);
-    return;
-  }
+    sock.user = user;
+    sock.expect = ['seq'];
+    sock.hmac = crypto.createHmac(sock.algo, sock.key);
+  });
 
-  sock.user = user;
-  sock.expect = ['seq'];
-  sock.hmac = crypto.createHmac(sock.algo, sock.key);
+
 }
 
 function s4pp_seq(sock, line)
@@ -242,7 +247,7 @@ function s4pp_data(sock, line)
   sock.expect = ['data', 'sig', 'dict'];
   sock.runhash = true;
 }
-  
+
 var commands =
 {
   'AUTH:': s4pp_auth,
