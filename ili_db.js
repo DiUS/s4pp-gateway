@@ -3,6 +3,11 @@
   var https = require('https');
   var users = require('./ili_users.js');
 
+
+  if (process.env.ILI_API_HOST === void 0) {
+    throw "ILI API HOST not defined.";
+  }
+
   exports.commit = function (user, samples, callback) {
     try{
       var byname = {};
@@ -39,7 +44,7 @@
         var sig = hmac.digest('hex');
 
         var opts = {
-          host: 'api.intelligent.li',
+          host: process.env.ILI_API_HOST,
           path: '/api/v2/streams',
           method: 'POST',
           headers: {
