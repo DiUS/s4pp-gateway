@@ -43,6 +43,10 @@ Create / configure the start up script if required:
     WantedBy=multi-user.target
     EOL
 
+To Stop or Start the s4pp service use `systemctl`
+
+    sudo systemctl [stop/start] s4pp
+
 The s4pp gateway requires API access to intelligent.li in order to
 retrieve the sensors (users) that use the gateway service.  The intelligent.li
 endpoint and access keys are exposed as environment variables in the systemd
