@@ -62,6 +62,8 @@
         });
         req.write(body);
         req.end();
+      }).catch(function(err) {
+        callback('exception: ' + err.toString());
       });
     }
     catch(e)
