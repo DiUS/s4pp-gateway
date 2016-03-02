@@ -16,38 +16,50 @@ On your local machine (ideally from CI) build the NPM package:
 
     npm pack
 
-Then copy it to the target instance and install:
+Then copy it to the target instance and install. *s4pp* run on the same
+ec2 instance as the API:
 
-    scp s4pp-gateway-1.0.0.tgz admin@xx.xx.xx.xx:
-    ssh admin@xx.xx.xx.xx
-    sudo ln -s /usr/bin/nodejs /usr/bin/node
+    scp s4pp-gateway-1.0.0.tgz ec2-user@api-prod.intelligent.li
+    ssh ec2-user@api-prod.intelligent.li
     sudo npm install -g s4pp-gateway-1.0.0.tgz
 
-Create / configure the start up script if required:
+Create / configure the start up script:
 
-    cat >/etc/systemd/system/s4pp.service <<EOL
-    [Service]
-    ExecStart=/usr/local/bin/s4ppgw /var/log/s4pp.data
-    Restart=always
-    StandardOutput=syslog
-    StandardError=syslog
-    SyslogIdentifier=s4pp
-    User=s4pp
-    Group=s4pp
-    Environment=NODE_ENV=production
-    Environment=ILI_API_HOST=api.xxx.intelligent.li
-    Environment=ILI_USER_KEY=xxxxxx
-    Environment=ILI_USER_SECRET_KEY=xxxxxx
+    cat >/etc/init/s4pp.conf <<EOL
+    description "s4pp gateway"
+    author      "ili"
 
-    [Install]
-    WantedBy=multi-user.target
+    start on filesystem or runlevel [2345]
+    stop on shutdown
+
+    script
+        export ILI_API_HOST="0.0.0.0"
+        export ILI_USER_SECRET_KEY="xxx"
+        export ILI_USER_KEY="yyy"
+
+        exec s4ppgw >> /var/log/s4pp.log 2>&1
+
+    end script
+
+    pre-start script
+        echo "[`date`] s4ppgw starting" >> /var/log/s4pp.log
+    end script
+
+    pre-stop script
+        echo "[`date`] s4ppgw stopping" >> /var/log/s4pp.log
+    end script
     EOL
 
-To Stop or Start the s4pp service use `systemctl`
 
-    sudo systemctl [stop/start] s4pp
+To Stop or Start the s4pp service use `upstart`
+
+    sudo [stop/start] s4pp
+
+To view S4PP logs
+
+    tail /var/log/s4pp.log
 
 The s4pp gateway requires API access to intelligent.li in order to
 retrieve the sensors (users) that use the gateway service.  The intelligent.li
-endpoint and access keys are exposed as environment variables in the systemd
-config
+endpoint and access keys are exposed as environment variables in the upstart
+config. Replace as neccessary.
