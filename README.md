@@ -25,31 +25,32 @@ ec2 instance as the API:
 
 Create / configure the start up script:
 
-    cat >/etc/init/s4pp.conf <<EOL
-    description "s4pp gateway"
-    author      "ili"
+```
+cat >/etc/init/s4pp.conf <<EOL
+description "s4pp gateway"
+author      "ili"
 
-    start on filesystem or runlevel [2345]
-    stop on shutdown
+start on filesystem or runlevel [2345]
+stop on shutdown
 
-    script
-        export ILI_API_HOST="0.0.0.0"
-        export ILI_USER_SECRET_KEY="xxx"
-        export ILI_USER_KEY="yyy"
+script
+    export ILI_API_HOST="0.0.0.0"
+    export ILI_USER_SECRET_KEY="xxx"
+    export ILI_USER_KEY="yyy"
 
-        exec s4ppgw >> /var/log/s4pp.log 2>&1
+    exec s4ppgw >> /var/log/s4pp.log 2>&1
 
-    end script
+end script
 
-    pre-start script
-        echo "[`date`] s4ppgw starting" >> /var/log/s4pp.log
-    end script
+pre-start script
+    echo "[`date`] s4ppgw starting" >> /var/log/s4pp.log
+end script
 
-    pre-stop script
-        echo "[`date`] s4ppgw stopping" >> /var/log/s4pp.log
-    end script
-    EOL
-
+pre-stop script
+    echo "[`date`] s4ppgw stopping" >> /var/log/s4pp.log
+end script
+EOL
+```
 
 To Stop or Start the s4pp service use `upstart`
 
