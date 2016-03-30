@@ -64,3 +64,10 @@ The s4pp gateway requires API access to intelligent.li in order to
 retrieve the sensors (users) that use the gateway service.  The intelligent.li
 endpoint and access keys are exposed as environment variables in the upstart
 config. Replace as neccessary.
+
+To log messages received by _s4pp_ specify an argument to the exec script that
+is the name of the file to log messages to. For example:
+
+    exec s4ppgw /var/log/s4pp.data >> /var/log/s4pp.log 2>&1
+
+
