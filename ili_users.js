@@ -8,29 +8,50 @@ Q  = require('q');
   }
 
   var userCache = {};
-  getIliUsers(function(err, users) {
-    if (err) throw "Unable to get users from ili API: " + err;
-    users['users'].map(function(obj) {
-      userCache[obj.key] = obj;
+  var cacheCreatedAt;
+
+  function cacheAge() {
+     return (((new Date() - cacheCreatedAt) / 1000) / 60);
+  }
+
+  function populateUserCache() {
+    console.log('Populating user cache...');
+    userCache._loaded=false;
+    getIliUsers(function(err, users) {
+      if (err) throw "Unable to get users from ili API: " + err;
+      users['users'].map(function(obj) {
+        userCache[obj.key] = obj;
+      });
+      userCache._loaded=true;
+      cacheCreatedAt = new Date();
+      console.log('Finished populating User cache at: ' + cacheCreatedAt);
     });
-    userCache._loaded=true;
-  });
+  };
 
   exports.keyFor = function(user) {
     var deferred = Q.defer();
     waitForUsers = function() {
-      if (userCache._loaded != true) {
+      if (userCache._loaded !== true) {
         return setTimeout(function() {
           return waitForUsers();
         }, 200);
       } else {
-        return deferred.resolve(userCache[user]);
+        var userObject = userCache[user];
+        if (userObject == null && cacheAge() > 60) {
+          console.log('User not in cache. Cache has expired.  Repopulating...');
+          populateUserCache();
+          waitForUsers();
+        } else {
+          return deferred.resolve(userObject);
+        }
       }
     };
 
     waitForUsers();
     return deferred.promise;
   };
+
+  populateUserCache();
 
 })();
 
