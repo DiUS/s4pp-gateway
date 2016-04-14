@@ -42,6 +42,11 @@ script
 
 end script
 
+
+# Restart the process if it dies with a signal
+# or exit code not given by the 'normal exit' stanza.
+respawn
+
 pre-start script
     echo "[`date`] s4ppgw starting" >> /var/log/s4pp.log
 end script
