@@ -47,6 +47,9 @@ end script
 # or exit code not given by the 'normal exit' stanza.
 respawn
 
+# respawn the job indefinitely in the hope the API will eventually be available
+respawn limit unlimited
+
 pre-start script
     echo "[`date`] s4ppgw starting" >> /var/log/s4pp.log
 end script
@@ -54,6 +57,10 @@ end script
 pre-stop script
     echo "[`date`] s4ppgw stopping" >> /var/log/s4pp.log
 end script
+
+# wait before respawing to give time for the API to return
+post-stop exec sleep 20
+
 EOL
 ```
 
